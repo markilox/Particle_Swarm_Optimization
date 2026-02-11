@@ -6,7 +6,9 @@ class Objective:
 
 
 # The __call__ method allows instances of the Objective classes to be called like functions.
-
+# obj = get_objective("Rastrigin")
+# x = np.array([0.0, 0.0])
+# print(obj(x))   # Llama a __call__
 class Sphere(Objective):
 
     def __init__(self):
