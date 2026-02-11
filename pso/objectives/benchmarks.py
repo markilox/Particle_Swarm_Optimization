@@ -3,8 +3,6 @@ import numpy as np
 class Objective:
     name: str
 
-
-
 # The __call__ method allows instances of the Objective classes to be called like functions.
 # obj = get_objective("Rastrigin")
 # x = np.array([0.0, 0.0])
@@ -13,6 +11,8 @@ class Sphere(Objective):
 
     def __init__(self):
         self.name = "Sphere"
+        self.lower_bound = -5.12
+        self.upper_bound = 5.12
 
     def __call__(self, x: np.ndarray) -> float:
         return np.sum(x**2)
@@ -21,6 +21,8 @@ class Rastrigin(Objective):
 
     def __init__(self):
         self.name = "Rastrigin"
+        self.lower_bound = -5.12
+        self.upper_bound = 5.12
 
     def __call__(self, x: np.ndarray) -> float:
         return 10 * len(x) + np.sum(x**2 - 10 * np.cos(2 * np.pi * x))
@@ -29,6 +31,8 @@ class Rosenbrock(Objective):
 
     def __init__(self):
         self.name = "Rosenbrock"
+        self.lower_bound = -2.048
+        self.upper_bound = 2.048
 
     def __call__(self, x: np.ndarray) -> float:
         return np.sum(100 * (x[1:] - x[:-1]**2)**2 + (x[:-1] - 1)**2)
@@ -37,6 +41,8 @@ class Ackley(Objective):
 
     def __init__(self):
         self.name = "Ackley"
+        self.lower_bound = -32.768
+        self.upper_bound = 32.768
 
     def __call__(self, x: np.ndarray) -> float:
         a = 20
