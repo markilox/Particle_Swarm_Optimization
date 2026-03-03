@@ -1,17 +1,35 @@
-# Quiero que llames a las clases core y benchmarks para probar que todo funciona correctamente
-import numpy as np
+import logging
 
-# importa el módulo de funciones objetivo y la clase PSO real
-from pso.objectives import benchmarks
-from pso.core.pso import PSO
+from pso.core.pso import BoxBounds, PSO, PSOConfig, StopCriteria
+from pso.objectives.benchmarks import get_objective
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+    objective = get_objective("rastrigin")
+    dimension = 10
+    lower, upper = objective.bounds(dimension)
+
+    pso = PSO(
+        objective=objective,
+        bounds=BoxBounds(lower=lower, upper=upper),
+        config=PSOConfig(
+            dimension=dimension,
+            swarm_size=40,
+            inertia_weight=0.7,
+            cognitive_weight=1.5,
+            social_weight=1.5,
+            stop=StopCriteria(max_iterations=150, tolerance=1e-8, stagnation_iterations=30, min_delta=1e-12),
+            seed=42,
+        ),
+    )
+    result = pso.optimize()
+    print(f"Best value: {result.best_value:.8f}")
+    print(f"Best position: {result.best_position}")
+    print(f"Iterations executed: {len(result.history)}")
+    print(f"Total time (s): {result.total_time_s:.6f}")
+
 
 if __name__ == "__main__":
-    # Prueba de las funciones objetivo usando el factory actual
-    for name in ["Sphere", "Rastrigin", "Rosenbrock", "Ackley"]:
-        obj = benchmarks.get_objective(name)
-        x = np.array([0.0, 0.0])
-        print(f"{name} at {x}: {obj(x):.6f}")   # invoca __call__
-
-    # Prueba del PSO (la clase PSO todavía es esqueleto, pero al menos se instancia)
-    pso = PSO(objective_name="Rastrigin", num_particles=30, num_iterations=100)
-    pso.optimize()
+    main()

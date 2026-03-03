@@ -1,66 +1,59 @@
 import numpy as np
 
-class Objective:
-    name: str
-# The __call__ method allows instances of the Objective classes to be called like functions.
-# obj = get_objective("Rastrigin")
-# x = np.array([0.0, 0.0])
-# print(obj(x))   # Llama a __call__
-class Sphere(Objective):
 
-    def __init__(self):
-        self.name = "Sphere"
-        self.lower_bound = -5.12
-        self.upper_bound = 5.12
+class ObjectiveSpec:
+    def __init__(self, name: str, fn, lower_bound: float, upper_bound: float) -> None:
+        self.name = name
+        self.fn = fn
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
 
     def __call__(self, x: np.ndarray) -> float:
-        return np.sum(x**2)
+        return float(self.fn(x))
 
-class Rastrigin(Objective):
+    def bounds(self, dimension: int) -> tuple[np.ndarray, np.ndarray]:
+        lower = np.full(dimension, self.lower_bound, dtype=float)
+        upper = np.full(dimension, self.upper_bound, dtype=float)
+        return lower, upper
 
-    def __init__(self):
-        self.name = "Rastrigin"
-        self.lower_bound = -5.12
-        self.upper_bound = 5.12
 
-    def __call__(self, x: np.ndarray) -> float:
-        return 10 * len(x) + np.sum(x**2 - 10 * np.cos(2 * np.pi * x))
+def sphere(x: np.ndarray) -> float:
+    return float(np.sum(x**2))
 
-class Rosenbrock(Objective):
 
-    def __init__(self):
-        self.name = "Rosenbrock"
-        self.lower_bound = -2.048
-        self.upper_bound = 2.048
+def rastrigin(x: np.ndarray) -> float:
+    return float(10.0 * x.size + np.sum(x**2 - 10.0 * np.cos(2.0 * np.pi * x)))
 
-    def __call__(self, x: np.ndarray) -> float:
-        return np.sum(100 * (x[1:] - x[:-1]**2)**2 + (x[:-1] - 1)**2)
 
-class Ackley(Objective):
+def rosenbrock(x: np.ndarray) -> float:
+    return float(np.sum(100.0 * (x[1:] - x[:-1] ** 2) ** 2 + (x[:-1] - 1.0) ** 2))
 
-    def __init__(self):
-        self.name = "Ackley"
-        self.lower_bound = -32.768
-        self.upper_bound = 32.768
 
-    def __call__(self, x: np.ndarray) -> float:
-        a = 20
-        b = 0.2
-        c = 2 * np.pi
-        d = len(x)
-        sum1 = np.sum(x**2)
-        sum2 = np.sum(np.cos(c * x))
-        return -a * np.exp(-b * np.sqrt(sum1 / d)) - np.exp(sum2 / d) + a + np.exp(1)
+def ackley(x: np.ndarray) -> float:
+    a = 20.0
+    b = 0.2
+    c = 2.0 * np.pi
+    d = x.size
+    sum1 = np.sum(x**2)
+    sum2 = np.sum(np.cos(c * x))
+    return float(-a * np.exp(-b * np.sqrt(sum1 / d)) - np.exp(sum2 / d) + a + np.e)
 
-#Function which recieves the name of the objective and returns the corresponding objective function
-def get_objective(name: str) -> Objective:
-    if name == "Sphere":
-        return Sphere()
-    elif name == "Rastrigin":
-        return Rastrigin()
-    elif name == "Rosenbrock":
-        return Rosenbrock()
-    elif name == "Ackley":
-        return Ackley()
-    else:
-        raise ValueError(f"Objective function '{name}' not recognized.")
+
+OBJECTIVES: dict[str, ObjectiveSpec] = {
+    "sphere": ObjectiveSpec(name="sphere", fn=sphere, lower_bound=-5.12, upper_bound=5.12),
+    "rastrigin": ObjectiveSpec(name="rastrigin", fn=rastrigin, lower_bound=-5.12, upper_bound=5.12),
+    "rosenbrock": ObjectiveSpec(name="rosenbrock", fn=rosenbrock, lower_bound=-2.048, upper_bound=2.048),
+    "ackley": ObjectiveSpec(name="ackley", fn=ackley, lower_bound=-32.768, upper_bound=32.768),
+}
+
+
+def get_objective(name: str) -> ObjectiveSpec:
+    key = name.strip().lower()
+    if key not in OBJECTIVES:
+        available = ", ".join(sorted(OBJECTIVES))
+        raise ValueError(f"Unknown objective '{name}'. Available: {available}")
+    return OBJECTIVES[key]
+
+
+def list_objectives() -> list[str]:
+    return sorted(OBJECTIVES.keys())
