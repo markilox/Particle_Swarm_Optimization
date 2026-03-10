@@ -1,12 +1,9 @@
-from typing import TYPE_CHECKING
+from typing import Any
 
 from parallel.base import FitnessEvaluator
 
-if TYPE_CHECKING:
-    from pso.core.swarm import Swarm
-
 
 class SequentialEvaluator(FitnessEvaluator):
-    def evaluate(self, swarm: "Swarm", objective) -> None:
+    def evaluate(self, swarm: Any, objective) -> None:
         for particle in swarm.particles:
             particle.evaluate(objective)

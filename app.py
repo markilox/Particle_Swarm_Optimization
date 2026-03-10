@@ -17,11 +17,11 @@ def main() -> None:
         bounds=BoxBounds(lower=lower, upper=upper),
         config=PSOConfig(
             dimension=dimension,
-            swarm_size=40,
+            swarm_size=1000,
             inertia_weight=0.7,
             cognitive_weight=1.5,
             social_weight=1.5,
-            stop=StopCriteria(max_iterations=150, tolerance=1e-8, stagnation_iterations=30, min_delta=1e-12),
+            stop=StopCriteria(max_iterations=500, tolerance=1e-8, stagnation_iterations=30, min_delta=1e-12),
             seed=42,
         ),
         evaluator=SequentialEvaluator(),

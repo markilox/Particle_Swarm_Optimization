@@ -1,12 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pso.core.swarm import Swarm
+from typing import Any
 
 
 class FitnessEvaluator(ABC):
     @abstractmethod
-    def evaluate(self, swarm: "Swarm", objective) -> None:
+    def evaluate(self, swarm: Any, objective) -> None:
         """Evaluate swarm particles and update per-particle best values."""
         raise NotImplementedError
