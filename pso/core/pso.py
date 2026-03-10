@@ -4,6 +4,7 @@ import time
 
 import numpy as np
 
+from parallel.sequential import SequentialEvaluator
 from pso.core.bounds import ClampBoundsPolicy
 from pso.core.particle import Particle
 from pso.core.swarm import Swarm
@@ -17,11 +18,13 @@ class PSO:
         objective,
         bounds: BoxBounds,
         config: PSOConfig,
+        evaluator=None,
         logger: logging.Logger | None = None,
     ) -> None:
         self.objective = objective
         self.bounds = bounds
         self.config = config
+        self.evaluator = evaluator if evaluator is not None else SequentialEvaluator()
         self.logger = logger or logging.getLogger("pso")
         self.rng = np.random.default_rng(config.seed)
 
@@ -128,8 +131,7 @@ class PSO:
             particle.update_position(bounds=self.bounds, bounds_policy=ClampBoundsPolicy.apply)
 
     def _evaluate_particles(self, swarm: Swarm) -> None:
-        for particle in swarm.particles:
-            particle.evaluate(self.objective)
+        self.evaluator.evaluate(swarm, self.objective)
         swarm.update_global_best()
 
     def _validate_config(self) -> None:

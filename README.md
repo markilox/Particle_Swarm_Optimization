@@ -20,8 +20,10 @@ pso/
     pso.py
   objectives/
     benchmarks.py
+parallel/
+  base.py
+  sequential.py
 app.py
-run_pso.py
 ```
 
 ## Ejecucion
@@ -33,7 +35,7 @@ python app.py
 Otra ejecucion de ejemplo:
 
 ```bash
-python run_pso.py
+python app.py
 ```
 
 ## API secuencial (V0)
@@ -47,4 +49,4 @@ python run_pso.py
 - `experiments/`: runners reproducibles y grid search.
 - `io/`: persistencia estructurada de resultados.
 - `viz/`: curvas y animaciones para `d=2`/`d=3`.
-- `parallel/`: V1-V4 reutilizando el mismo core.
+- `parallel/`: V1-V4 reutilizando el mismo core (V0 secuencial ya integrado).

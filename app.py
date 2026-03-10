@@ -1,5 +1,6 @@
 import logging
 
+from parallel.sequential import SequentialEvaluator
 from pso.core.pso import BoxBounds, PSO, PSOConfig, StopCriteria
 from pso.objectives.benchmarks import get_objective
 
@@ -23,6 +24,7 @@ def main() -> None:
             stop=StopCriteria(max_iterations=150, tolerance=1e-8, stagnation_iterations=30, min_delta=1e-12),
             seed=42,
         ),
+        evaluator=SequentialEvaluator(),
     )
     result = pso.optimize()
     print(f"Best value: {result.best_value:.8f}")
