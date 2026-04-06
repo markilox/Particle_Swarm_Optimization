@@ -1,9 +1,6 @@
-from typing import TYPE_CHECKING
-
 import numpy as np
 
-if TYPE_CHECKING:
-    from pso.core.types import BoxBounds
+from pso.core.types import BoxBounds
 
 
 class Particle:
@@ -35,7 +32,7 @@ class Particle:
 
     def update_position(
         self,
-        bounds: "BoxBounds",
+        bounds: BoxBounds,
         bounds_policy,
     ) -> None:
         new_position = self.position + self.velocity

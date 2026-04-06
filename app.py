@@ -1,6 +1,6 @@
 import logging
 
-from parallel.sequential import SequentialEvaluator
+from pso.parallel.sequential import SequentialEvaluator
 from pso.core.pso import BoxBounds, PSO, PSOConfig, StopCriteria
 from pso.objectives.benchmarks import get_objective
 

@@ -1,1 +1,5 @@
 numpy>=1.24
+prettytable>=3.0
+matplotlib>=3.7
+pillow>=9.0
+pandas>=2.0
