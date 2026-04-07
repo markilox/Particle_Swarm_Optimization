@@ -17,10 +17,10 @@ def _evaluate_single(args: tuple) -> float:
 class MultiprocessingEvaluator(FitnessEvaluator):
     def __init__(self, max_workers: int | None = None, chunksize: int = 1) -> None:
         # max_workers=None lets ProcessPoolExecutor choose based on available cores
-        self.max_workers = max_workers
-        # chunksize: number of particles per IPC task (batching)
-        # higher values reduce communication overhead for large swarms
+        # The pool is created once here and reused across all iterations,
+        # avoiding the overhead of spawning/destroying workers every iteration.
         self.chunksize = chunksize
+        self._executor = ProcessPoolExecutor(max_workers=max_workers)
 
     def evaluate(self, swarm, objective) -> None:
         particles = swarm.particles
@@ -30,8 +30,7 @@ class MultiprocessingEvaluator(FitnessEvaluator):
 
         # executor.map distributes args across workers and collects results in order
         # chunksize groups iterable elements to reduce IPC overhead
-        with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
-            values = list(executor.map(_evaluate_single, args, chunksize=self.chunksize))
+        values = list(self._executor.map(_evaluate_single, args, chunksize=self.chunksize))
 
         # update personal best in the main process
         # (workers operate on copies; changes do not propagate back automatically)
@@ -39,3 +38,7 @@ class MultiprocessingEvaluator(FitnessEvaluator):
             if value < particle.best_value:
                 particle.best_value = value
                 particle.best_position = particle.position.copy()
+
+    def close(self) -> None:
+        """Shut down the worker pool. Called automatically by run_experiment()."""
+        self._executor.shutdown(wait=True)

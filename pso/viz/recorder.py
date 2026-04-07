@@ -1,7 +1,7 @@
-"""Grabador de trayectorias del enjambre para visualización.
+"""Swarm trajectory recorder for visualization.
 
-SwarmRecorder se pasa como callback on_iteration a PSO.optimize().
-Captura un snapshot por iteración con coste mínimo: solo copia arrays.
+SwarmRecorder is passed as an on_iteration callback to PSO.optimize().
+Captures one snapshot per iteration with minimal overhead: only copies arrays.
 """
 
 from dataclasses import dataclass
@@ -11,17 +11,17 @@ import numpy as np
 
 @dataclass
 class SnapshotFrame:
-    """Estado del enjambre en una iteración."""
+    """Swarm state at a single iteration."""
     iteration: int
-    positions: np.ndarray        # shape (swarm_size, dimension)
-    global_best_position: np.ndarray  # shape (dimension,)
+    positions: np.ndarray              # shape (swarm_size, dimension)
+    global_best_position: np.ndarray   # shape (dimension,)
     global_best_value: float
 
 
 class SwarmRecorder:
-    """Acumula SnapshotFrame en cada llamada.
+    """Accumulates SnapshotFrames on each call.
 
-    Uso:
+    Usage:
         recorder = SwarmRecorder(every_n=1)
         result = pso.optimize(on_iteration=recorder)
         frames = recorder.frames
@@ -30,9 +30,9 @@ class SwarmRecorder:
     def __init__(self, every_n: int = 1) -> None:
         """
         Args:
-            every_n: guardar snapshot solo cada N iteraciones.
-                     every_n=1 guarda todas (por defecto).
-                     every_n=5 reduce el número de frames en animaciones largas.
+            every_n: save a snapshot only every N iterations.
+                     every_n=1 saves all (default).
+                     every_n=5 reduces frame count for long animations.
         """
         self.every_n = every_n
         self.frames: list[SnapshotFrame] = []
@@ -44,11 +44,12 @@ class SwarmRecorder:
         global_best_position: np.ndarray,
         global_best_value: float,
     ) -> None:
+        # Only record this frame if it falls on the configured interval
         if iteration % self.every_n == 0:
             self.frames.append(
                 SnapshotFrame(
                     iteration=iteration,
-                    positions=positions.copy(),
+                    positions=positions.copy(),               # copy to avoid mutation across iterations
                     global_best_position=global_best_position.copy(),
                     global_best_value=global_best_value,
                 )

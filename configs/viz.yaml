@@ -1,0 +1,28 @@
+# Visualization configuration
+# Available objectives: sphere, rastrigin, rosenbrock, ackley
+
+objective: sphere
+dimension: 2
+
+# Bounds are optional — defaults to the objective's standard bounds:
+#   sphere:     [-5.12,   5.12]
+#   rastrigin:  [-5.12,   5.12]
+#   rosenbrock: [-2.048,  2.048]
+#   ackley:     [-32.768, 32.768]
+# lower_bound: --
+# upper_bound: --
+
+swarm_size: 30
+iterations: 100
+inertia: 0.7
+cognitive: 1.5
+social: 1.5
+seed: 42
+
+# Animation
+format: gif      # gif (requires pillow) | mp4 (requires ffmpeg)
+fps: 10
+every_n: 1       # record a frame every N iterations
+resolution: 150  # contour grid resolution (only used for d=2)
+
+output_dir: results/viz

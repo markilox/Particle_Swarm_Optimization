@@ -1,0 +1,29 @@
+# Single PSO run configuration
+# Available objectives: sphere, rastrigin, rosenbrock, ackley
+# Available evaluators: sequential, threading, multiprocessing
+
+objective: sphere
+dimension: 2
+
+# Bounds are optional — defaults to the objective's standard bounds:
+#   sphere:     [-5.12,   5.12]
+#   rastrigin:  [-5.12,   5.12]
+#   rosenbrock: [-2.048,  2.048]
+#   ackley:     [-32.768, 32.768]
+
+evaluator: sequential
+# max_workers: null  # only for threading / multiprocessing
+
+swarm_size: 30
+iterations: 200
+inertia: 0.7
+cognitive: 1.5
+social: 1.5
+
+seed: 42
+
+# Stop criteria (optional)
+# tolerance: 1.0e-8
+# stagnation: 50
+
+output_dir: results/runs

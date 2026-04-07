@@ -16,9 +16,9 @@ EVALUATOR_NAMES = ["sequential", "threading", "multiprocessing"]
 
 
 def get_evaluator(name: str, **kwargs) -> FitnessEvaluator:
-    """Devuelve una instancia del evaluador por nombre.
+    """Returns an evaluator instance by name.
 
-    kwargs se pasan al constructor del evaluador elegido:
+    kwargs are forwarded to the chosen evaluator's constructor:
       - threading/multiprocessing: max_workers (int)
       - multiprocessing:           chunksize (int)
     """
@@ -33,4 +33,4 @@ def get_evaluator(name: str, **kwargs) -> FitnessEvaluator:
             chunksize=kwargs.get("chunksize", 1),
         )
     available = ", ".join(EVALUATOR_NAMES)
-    raise ValueError(f"Evaluador desconocido '{name}'. Disponibles: {available}")
+    raise ValueError(f"Unknown evaluator '{name}'. Available: {available}")

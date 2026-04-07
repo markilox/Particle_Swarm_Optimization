@@ -1,0 +1,26 @@
+# Grid search configuration
+# Available objectives: sphere, rastrigin, rosenbrock, ackley
+# Available evaluators: sequential, threading, multiprocessing
+
+objective: sphere
+dimension: 10
+
+# Bounds are optional — defaults to the objective's standard bounds:
+#   sphere:     [-5.12,   5.12]
+#   rastrigin:  [-5.12,   5.12]
+#   rosenbrock: [-2.048,  2.048]
+#   ackley:     [-32.768, 32.768]
+
+
+evaluator: sequential
+
+# Hyperparameter grid (cartesian product of all combinations)
+inertia:   [0.4, 0.7, 0.9]
+cognitive: [1.0, 1.5, 2.0]
+social:    [1.0, 1.5, 2.0]
+swarm_sizes: [30]
+
+seeds: [42, 43, 44, 45, 46]
+iterations: 200
+
+output_dir: results/grid_search

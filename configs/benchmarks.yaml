@@ -1,0 +1,34 @@
+# Benchmark suite configuration
+# Available objectives: sphere, rastrigin, rosenbrock, ackley
+# Available evaluators: sequential, threading, multiprocessing
+
+objectives:
+  - sphere
+  - rastrigin
+  - rosenbrock
+  - ackley
+
+dimensions:
+  - 2
+  - 10
+  - 30
+
+evaluators:
+  - sequential
+  - threading
+  - multiprocessing
+
+seeds:
+  - 42
+  - 43
+  - 44
+  - 45
+  - 46
+
+swarm_size: 30
+iterations: 200
+inertia: 0.7
+cognitive: 1.5
+social: 1.5
+
+output_dir: results/benchmarks

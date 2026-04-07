@@ -206,5 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# PSO experiment results (can grow very large)
-results/
+# PSO experiment results — track CSVs and PNGs, ignore large animations
+results/viz/*.gif
+results/viz/*.mp4

@@ -1,13 +1,4 @@
-"""Tests unitarios del núcleo PSO.
 
-Cubre los cuatro requisitos explícitos del enunciado:
-  1. Reproducibilidad por seed.
-  2. Manejo de límites (clamp).
-  3. Evolución monótona del mejor global (no debe empeorar).
-  4. Correctitud básica en Sphere (debe converger a ~0).
-
-Además incluye tests de contrato de las interfaces principales.
-"""
 
 import numpy as np
 
@@ -19,7 +10,7 @@ from pso.parallel import get_evaluator
 
 
 # ---------------------------------------------------------------------------
-# Fixtures comunes
+# Common fixtures
 # ---------------------------------------------------------------------------
 
 def make_pso(objective_name="sphere", dimension=2, swarm_size=20, iterations=100, seed=42, evaluator_name="sequential"):
@@ -43,19 +34,19 @@ def make_pso(objective_name="sphere", dimension=2, swarm_size=20, iterations=100
 
 
 # ---------------------------------------------------------------------------
-# 1. Reproducibilidad por seed
+# 1. Reproducibility by seed
 # ---------------------------------------------------------------------------
 
 class TestReproducibility:
     def test_same_seed_same_result(self):
-        """Dos ejecuciones con la misma seed deben producir exactamente el mismo resultado."""
+        """Two runs with the same seed must produce exactly the same result."""
         result_a = make_pso(seed=42).optimize()
         result_b = make_pso(seed=42).optimize()
         assert result_a.best_value == result_b.best_value
         np.testing.assert_array_equal(result_a.best_position, result_b.best_position)
 
     def test_same_seed_same_history(self):
-        """El historial de fitness por iteración debe ser idéntico con la misma seed."""
+        """The per-iteration fitness history must be identical with the same seed."""
         result_a = make_pso(seed=7).optimize()
         result_b = make_pso(seed=7).optimize()
         fitnesses_a = [m.best_fitness for m in result_a.history]
@@ -63,37 +54,37 @@ class TestReproducibility:
         assert fitnesses_a == fitnesses_b
 
     def test_different_seeds_different_results(self):
-        """Seeds distintas deben producir resultados distintos (con alta probabilidad)."""
+        """Different seeds must produce different results (with high probability)."""
         result_a = make_pso(seed=1).optimize()
         result_b = make_pso(seed=2).optimize()
         assert result_a.best_value != result_b.best_value
 
 
 # ---------------------------------------------------------------------------
-# 2. Manejo de límites
+# 2. Bounds handling
 # ---------------------------------------------------------------------------
 
 class TestBounds:
     def test_clamp_position_inside_bounds(self):
-        """ClampBoundsPolicy debe devolver posición dentro de [lower, upper]."""
+        """ClampBoundsPolicy must return a position within [lower, upper]."""
         bounds = BoxBounds(lower=np.array([-5.0, -5.0]), upper=np.array([5.0, 5.0]))
-        position = np.array([7.0, -8.0])   # fuera de bounds
+        position = np.array([7.0, -8.0])   # outside bounds
         velocity = np.array([1.0, -1.0])
         clipped, _ = ClampBoundsPolicy.apply(position, velocity, bounds)
         assert np.all(clipped >= bounds.lower)
         assert np.all(clipped <= bounds.upper)
 
     def test_clamp_zeroes_velocity_on_hit(self):
-        """La velocidad en las dimensiones que chocan con el límite debe ser 0."""
+        """Velocity must be zeroed in dimensions where the particle hit a boundary."""
         bounds = BoxBounds(lower=np.array([-5.0, -5.0]), upper=np.array([5.0, 5.0]))
-        position = np.array([7.0, 3.0])    # solo x sale del límite
+        position = np.array([7.0, 3.0])    # only x is out of bounds
         velocity = np.array([2.0, 1.0])
         _, new_vel = ClampBoundsPolicy.apply(position, velocity, bounds)
-        assert new_vel[0] == 0.0           # x chocó → velocidad a 0
-        assert new_vel[1] == 1.0           # y no chocó → velocidad intacta
+        assert new_vel[0] == 0.0           # x hit boundary → velocity zeroed
+        assert new_vel[1] == 1.0           # y did not hit → velocity unchanged
 
     def test_position_inside_bounds_unchanged(self):
-        """Posición ya dentro de los límites no debe modificarse."""
+        """A position already within bounds must not be modified."""
         bounds = BoxBounds(lower=np.array([-5.0, -5.0]), upper=np.array([5.0, 5.0]))
         position = np.array([1.0, -2.0])
         velocity = np.array([0.5, 0.5])
@@ -102,7 +93,7 @@ class TestBounds:
         np.testing.assert_array_equal(new_vel, velocity)
 
     def test_particles_stay_in_bounds_after_optimize(self):
-        """Todas las partículas deben estar dentro de los límites al terminar."""
+        """All particles must remain within bounds throughout the optimization."""
         objective = get_objective("sphere")
         lower, upper = objective.bounds(2)
         bounds = BoxBounds(lower=lower, upper=upper)
@@ -118,22 +109,22 @@ class TestBounds:
 
 
 # ---------------------------------------------------------------------------
-# 3. Monotonicidad del mejor global
+# 3. Monotonicity of the global best
 # ---------------------------------------------------------------------------
 
 class TestMonotonicity:
     def test_global_best_never_worsens(self):
-        """El mejor fitness global no debe aumentar en ninguna iteración."""
+        """The global best fitness must never increase between iterations."""
         result = make_pso(objective_name="sphere", dimension=5, iterations=200, seed=42).optimize()
         fitnesses = [m.best_fitness for m in result.history]
         for i in range(1, len(fitnesses)):
             assert fitnesses[i] <= fitnesses[i - 1] + 1e-15, (
-                f"El mejor fitness empeoró en iteración {i + 1}: "
+                f"Global best worsened at iteration {i + 1}: "
                 f"{fitnesses[i - 1]:.6e} → {fitnesses[i]:.6e}"
             )
 
     def test_global_best_never_worsens_rastrigin(self):
-        """Monotonicidad también en Rastrigin (multimodal)."""
+        """Monotonicity must also hold on Rastrigin (multimodal)."""
         result = make_pso(objective_name="rastrigin", dimension=5, iterations=150, seed=99).optimize()
         fitnesses = [m.best_fitness for m in result.history]
         for i in range(1, len(fitnesses)):
@@ -141,23 +132,21 @@ class TestMonotonicity:
 
 
 # ---------------------------------------------------------------------------
-# 4. Correctitud en Sphere
+# 4. Correctness on Sphere
 # ---------------------------------------------------------------------------
 
 class TestSphereConvergence:
     def test_sphere_converges_d2(self):
-        """PSO debe converger cerca de 0 en Sphere d=2 con parámetros razonables."""
+        """PSO must converge near 0 on Sphere d=2 with reasonable parameters."""
         result = make_pso(objective_name="sphere", dimension=2, swarm_size=30, iterations=300, seed=42).optimize()
-        assert result.best_value < 1e-6, f"Sphere d=2 no convergió: {result.best_value:.4e}"
+        assert result.best_value < 1e-6, f"Sphere d=2 did not converge: {result.best_value:.4e}"
 
     def test_sphere_converges_d10(self):
-        """PSO debe converger cerca de 0 en Sphere d=10."""
+        """PSO must converge near 0 on Sphere d=10."""
         result = make_pso(objective_name="sphere", dimension=10, swarm_size=50, iterations=500, seed=42).optimize()
-        assert result.best_value < 1e-4, f"Sphere d=10 no convergió: {result.best_value:.4e}"
+        assert result.best_value < 1e-4, f"Sphere d=10 did not converge: {result.best_value:.4e}"
 
     def test_sphere_best_position_near_zero(self):
-        """La mejor posición encontrada debe estar cerca del óptimo (0, 0)."""
+        """The best position found must be close to the optimum (0, 0)."""
         result = make_pso(objective_name="sphere", dimension=2, swarm_size=30, iterations=300, seed=42).optimize()
         assert np.linalg.norm(result.best_position) < 1e-3
-
-

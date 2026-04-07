@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass, fields
 from pathlib import Path
 
-from pso.core.types import PSOConfig, StopCriteria
+from pso.core.types import BoxBounds, PSOConfig, StopCriteria
 from pso.experiments.runner import ExperimentConfig, run_experiment
 from pso.objectives.benchmarks import ObjectiveSpec
 from pso.parallel.base import FitnessEvaluator
@@ -48,14 +48,16 @@ def run_grid_search(
     evaluator_name: str,
     output_dir: str | Path | None = None,
     logger: logging.Logger | None = None,
+    bounds: BoxBounds | None = None,
 ) -> list[GridSearchEntry]:
-    """Ejecuta el grid search y devuelve la lista de entradas.
+    """Runs the grid search and returns the list of entries.
 
     Args:
-        evaluator_factory: callable sin argumentos que devuelve un FitnessEvaluator
-            nuevo en cada llamada (necesario para evaluadores con estado interno).
-        output_dir: si se especifica, cada run individual persiste su metadata.json
-            y history.csv en un subdirectorio propio.
+        evaluator_factory: zero-argument callable that returns a new FitnessEvaluator
+            on each call (needed for stateful evaluators).
+        output_dir: if set, each individual run persists its metadata.json
+            and history.csv in its own subdirectory.
+        bounds: custom search bounds; if None uses objective defaults.
     """
     logger = logger or logging.getLogger("pso.grid_search")
     entries: list[GridSearchEntry] = []
@@ -71,8 +73,8 @@ def run_grid_search(
     )
     total = len(combos)
     logger.info(
-        f"Grid search: {total} combinaciones — "
-        f"objetivo={objective.name} d={dimension} evaluador={evaluator_name}"
+        f"Grid search: {total} combinations — "
+        f"objective={objective.name} d={dimension} evaluator={evaluator_name}"
     )
 
     for idx, (w, c1, c2, n, seed) in enumerate(combos, 1):
@@ -89,7 +91,7 @@ def run_grid_search(
             ),
             seed=seed,
         )
-        # Logger silencioso para las sub-ejecuciones del grid (evita spam de logs)
+        # Silent logger for grid sub-runs (avoids log spam)
         silent_logger = logging.getLogger("pso.grid_search.run")
         silent_logger.setLevel(logging.WARNING)
 
@@ -100,6 +102,7 @@ def run_grid_search(
             evaluator_name=evaluator_name,
             output_dir=output_dir,
             logger=silent_logger,
+            bounds=bounds,
         )
         result = run_experiment(exp)
 
@@ -128,7 +131,7 @@ def run_grid_search(
 
 
 def save_grid_search_results(entries: list[GridSearchEntry], path: str | Path) -> None:
-    """Guarda entradas de grid search en CSV."""
+    """Saves grid search entries to CSV."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if not entries:
@@ -143,8 +146,53 @@ def save_grid_search_results(entries: list[GridSearchEntry], path: str | Path) -
             )
 
 
+def save_grid_search_summary(entries: list[GridSearchEntry], path: str | Path) -> None:
+    """Saves a per-configuration summary (aggregated over seeds) to CSV.
+
+    Columns: objective, evaluator, dimension, inertia_weight, cognitive_weight,
+    social_weight, swarm_size, mean_fitness, std_fitness, min_fitness,
+    max_fitness, mean_time_s.
+    """
+    from collections import defaultdict
+    import statistics
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    grouped: dict[tuple, list[GridSearchEntry]] = defaultdict(list)
+    for e in entries:
+        key = (e.objective, e.evaluator, e.dimension,
+               e.inertia_weight, e.cognitive_weight, e.social_weight, e.swarm_size)
+        grouped[key].append(e)
+
+    fieldnames = [
+        "objective", "evaluator", "dimension",
+        "inertia_weight", "cognitive_weight", "social_weight", "swarm_size",
+        "mean_fitness", "std_fitness", "min_fitness", "max_fitness", "mean_time_s",
+    ]
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for (obj, ev, dim, w, c1, c2, n), group in sorted(grouped.items()):
+            values = [e.best_value for e in group]
+            writer.writerow({
+                "objective": obj,
+                "evaluator": ev,
+                "dimension": dim,
+                "inertia_weight": w,
+                "cognitive_weight": c1,
+                "social_weight": c2,
+                "swarm_size": n,
+                "mean_fitness": statistics.mean(values),
+                "std_fitness": statistics.stdev(values) if len(values) > 1 else 0.0,
+                "min_fitness": min(values),
+                "max_fitness": max(values),
+                "mean_time_s": statistics.mean(e.total_time_s for e in group),
+            })
+
+
 def load_grid_search_results(path: str | Path) -> list[GridSearchEntry]:
-    """Carga CSV de grid search y devuelve lista de GridSearchEntry."""
+    """Loads grid search CSV and returns a list of GridSearchEntry."""
     entries = []
     with open(Path(path)) as f:
         for row in csv.DictReader(f):

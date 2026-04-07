@@ -1,12 +1,3 @@
-"""run_benchmarks.py — Suite de benchmarks: todas las funciones × dimensiones × evaluadores.
-
-Pregunta los parámetros de forma interactiva y guarda resultados en dos CSVs:
-  summary_<ts>.csv  — una fila por run con métricas finales y configuración completa.
-  history_<ts>.csv  — una fila por iteración, con run_id para cruzar con summary.
-
-Uso:
-  python run_benchmarks.py
-"""
 
 import csv
 import logging
@@ -14,13 +5,16 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import yaml
 from prettytable import PrettyTable
 
 from pso.core.types import PSOConfig, StopCriteria
 from pso.experiments.runner import ExperimentConfig, run_experiment
-from pso.objectives.benchmarks import list_objectives, get_objective
-from pso.parallel import EVALUATOR_NAMES, get_evaluator
+from pso.objectives.benchmarks import get_objective
+from pso.parallel import get_evaluator
 
+
+CONFIG_FILE = Path(__file__).parent / "configs" / "benchmarks.yaml"
 
 SUMMARY_FIELDS = [
     "run_id", "objective", "dimension", "evaluator", "seed",
@@ -32,104 +26,16 @@ SUMMARY_FIELDS = [
 HISTORY_FIELDS = ["run_id", "iteration", "best_fitness", "eval_time_s", "update_time_s"]
 
 
-def ask_list(prompt: str, options: list[str], default: list[str]) -> list[str]:
-    """Muestra opciones disponibles y pide una selección separada por espacios."""
-    print(f"  Opciones: {', '.join(options)}")
-    raw = input(f"  {prompt} [{' '.join(default)}]: ").strip()
-    if not raw:
-        return default
-    chosen = raw.split()
-    invalid = [x for x in chosen if x not in options]
-    if invalid:
-        print(f"  Valores no válidos: {', '.join(invalid)}. Se usarán los valores por defecto.")
-        return default
-    return chosen
-
-
-def ask_int_list(prompt: str, default: list[int]) -> list[int]:
-    """Pide una lista de enteros separados por espacios."""
-    raw = input(f"  {prompt} [{' '.join(map(str, default))}]: ").strip()
-    if not raw:
-        return default
-    try:
-        return [int(x) for x in raw.split()]
-    except ValueError:
-        print("  Valor no válido. Se usará el valor por defecto.")
-        return default
-
-
-def ask_int(prompt: str, default: int) -> int:
-    raw = input(f"  {prompt} [{default}]: ").strip()
-    if not raw:
-        return default
-    try:
-        return int(raw)
-    except ValueError:
-        print("  Valor no válido. Se usará el valor por defecto.")
-        return default
-
-
-def ask_float(prompt: str, default: float) -> float:
-    raw = input(f"  {prompt} [{default}]: ").strip()
-    if not raw:
-        return default
-    try:
-        return float(raw)
-    except ValueError:
-        print("  Valor no válido. Se usará el valor por defecto.")
-        return default
-
-
-def ask_str(prompt: str, default: str) -> str:
-    raw = input(f"  {prompt} [{default}]: ").strip()
-    return raw if raw else default
-
-
-def prompt_params() -> dict:
-    """Pregunta todos los parámetros de forma interactiva y devuelve un dict."""
-    print("\n=== Configuración de la suite de benchmarks ===\n")
-
-    print("Funciones objetivo:")
-    objectives = ask_list("Selecciona (separadas por espacio)", list_objectives(), list_objectives())
-
-    print("\nDimensiones:")
-    dimensions = ask_int_list("Dimensiones (separadas por espacio)", [2, 10, 30])
-
-    print("\nEvaluadores:")
-    evaluators = ask_list("Selecciona (separadas por espacio)", EVALUATOR_NAMES, EVALUATOR_NAMES)
-
-    print("\nSemillas:")
-    seeds = ask_int_list("Seeds (separadas por espacio)", [42, 43, 44])
-
-    print("\nHiperparámetros del PSO:")
-    swarm_size = ask_int("Tamaño del enjambre", 30)
-    iterations = ask_int("Número de iteraciones", 200)
-    inertia   = ask_float("Inercia w", 0.7)
-    cognitive = ask_float("Cognitivo c1", 1.5)
-    social    = ask_float("Social c2", 1.5)
-
-    print("\nSalida:")
-    output_dir = ask_str("Directorio de resultados", "results/benchmarks")
-
-    return {
-        "objectives": objectives,
-        "dimensions": dimensions,
-        "evaluators": evaluators,
-        "seeds": seeds,
-        "swarm_size": swarm_size,
-        "iterations": iterations,
-        "inertia": inertia,
-        "cognitive": cognitive,
-        "social": social,
-        "output_dir": output_dir,
-    }
+def load_config() -> dict:
+    with open(CONFIG_FILE) as f:
+        return yaml.safe_load(f)
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     logger = logging.getLogger("benchmarks")
 
-    params = prompt_params()
+    params = load_config()
 
     combos = [
         (obj_name, dim, ev_name, seed)
@@ -146,7 +52,7 @@ def main() -> None:
     summary_path = output_dir / f"summary_{ts}.csv"
     history_path = output_dir / f"history_{ts}.csv"
 
-    print(f"\nLanzando {total} experimentos → {output_dir}\n")
+    print(f"\nLaunching {total} experiments → {output_dir}\n")
 
     suite_start = time.perf_counter()
     table_rows = []
@@ -233,11 +139,10 @@ def main() -> None:
     suite_time = time.perf_counter() - suite_start
 
     table = PrettyTable()
-    table.field_names = ["Objetivo", "d", "Evaluador", "Seed", "Best fitness", "Tiempo (s)", "Eval (s)", "Iters"]
-    table.align["Objetivo"] = "l"
-    table.align["Evaluador"] = "l"
+    table.field_names = ["Objective", "d", "Evaluator", "Seed", "Best fitness", "Time (s)", "Eval (s)", "Iters"]
+    table.align["Objective"] = "l"
+    table.align["Evaluator"] = "l"
     table.align["Best fitness"] = "r"
-    table.align["Tiempo (s)"] = "r"
     table.align["Eval (s)"] = "r"
     for r in table_rows:
         table.add_row([
@@ -252,9 +157,9 @@ def main() -> None:
         ])
     print()
     print(table)
-    print(f"\nSuite completada en {suite_time:.2f}s")
-    print(f"  {summary_path}  ({total} filas)")
-    print(f"  {history_path}  ({total * params['iterations']} filas aprox.)\n")
+    print(f"\nSuite completed in {suite_time:.2f}s")
+    print(f"  {summary_path}  ({total} rows)")
+    print(f"  {history_path}  (~{total * params['iterations']} rows)\n")
 
 
 if __name__ == "__main__":

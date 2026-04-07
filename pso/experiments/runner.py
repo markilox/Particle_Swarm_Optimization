@@ -1,7 +1,6 @@
-"""Runner de experimentos individuales.
+"""Individual experiment runner.
 
-Encapsula la construcción del PSO, la ejecución y el guardado opcional
-de resultados. Mantiene la lógica de orquestación fuera del core.
+Encapsulates PSO construction, execution, and optional result persistence.
 """
 
 import logging
@@ -15,7 +14,7 @@ from pso.parallel.base import FitnessEvaluator
 
 
 class ExperimentConfig:
-    """Agrupa todo lo necesario para una ejecución reproducible."""
+    """Groups everything needed for a reproducible run."""
 
     def __init__(
         self,
@@ -25,6 +24,7 @@ class ExperimentConfig:
         evaluator_name: str,
         output_dir: str | Path | None = None,
         logger: logging.Logger | None = None,
+        bounds: BoxBounds | None = None,
     ) -> None:
         self.objective = objective
         self.pso_config = pso_config
@@ -32,11 +32,19 @@ class ExperimentConfig:
         self.evaluator_name = evaluator_name
         self.output_dir = Path(output_dir) if output_dir else None
         self.logger = logger
+        self.bounds = bounds  # if None, defaults to objective.bounds(dimension)
 
 
-def run_experiment(exp: ExperimentConfig) -> OptimizationResult:
-    """Ejecuta un experimento y, si output_dir está definido, persiste el resultado."""
-    lower, upper = exp.objective.bounds(exp.pso_config.dimension)
+def run_experiment(exp: ExperimentConfig, on_iteration=None) -> OptimizationResult:
+    """Runs an experiment and, if output_dir is set, persists the result.
+
+    Always calls exp.evaluator.close() in a finally block so worker pools
+    (threading, multiprocessing) are released even if an exception occurs.
+    """
+    if exp.bounds is not None:
+        lower, upper = exp.bounds.lower, exp.bounds.upper
+    else:
+        lower, upper = exp.objective.bounds(exp.pso_config.dimension)
     pso = PSO(
         objective=exp.objective,
         bounds=BoxBounds(lower=lower, upper=upper),
@@ -44,7 +52,10 @@ def run_experiment(exp: ExperimentConfig) -> OptimizationResult:
         evaluator=exp.evaluator,
         logger=exp.logger,
     )
-    result = pso.optimize()
+    try:
+        result = pso.optimize(on_iteration=on_iteration)
+    finally:
+        exp.evaluator.close()
 
     if exp.output_dir is not None:
         save_result(
