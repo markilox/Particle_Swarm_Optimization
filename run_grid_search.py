@@ -57,7 +57,7 @@ def main() -> None:
         objective=objective,
         dimension=params["dimension"],
         grid=grid,
-        evaluator_factory=lambda: get_evaluator(params["evaluator"]),
+        evaluator_factory=lambda: get_evaluator(params["evaluator"], max_workers=params.get("max_workers")),
         evaluator_name=params["evaluator"],
         output_dir=None,
         logger=logger,

@@ -31,4 +31,8 @@ inertia: 0.7
 cognitive: 1.5
 social: 1.5
 
+# Workers for threading/multiprocessing (null = Python default)
+# With swarm_size=30, max_workers=4 gives ~7-8 particles/worker — better overhead ratio
+max_workers: 4
+
 output_dir: results/benchmarks

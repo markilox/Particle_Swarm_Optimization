@@ -68,7 +68,7 @@ def main() -> None:
 
         for idx, (obj_name, dim, ev_name, seed) in enumerate(combos, 1):
             objective = get_objective(obj_name)
-            evaluator = get_evaluator(ev_name)
+            evaluator = get_evaluator(ev_name, max_workers=params.get("max_workers"))
 
             config = PSOConfig(
                 dimension=dim,

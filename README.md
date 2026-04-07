@@ -123,6 +123,8 @@ El núcleo PSO es idéntico en todas las variantes. Solo cambia el **evaluador d
 
 **Ciclo de vida del pool**: ambos evaluadores crean el pool de workers una vez en `__init__` y lo reutilizan en cada iteración. `run_experiment()` llama a `close()` en un bloque `finally` al terminar la ejecución.
 
+**Número de workers**: configurable con `max_workers` en el YAML. Con `max_workers=None` Python usaría `cpu_count` procesos o `min(32, cpu_count+4)` hilos — más workers que partículas para enjambres pequeños, lo que maximiza el overhead. Se recomienda `max_workers=4` con `swarm_size=30`, dando ~7-8 partículas/worker. Regla general: `swarm_size / max_workers ≥ 4–8`.
+
 **Nota sobre el GIL**: threading no ofrece paralelismo real para código CPU-bound en CPython. Para las funciones de benchmark (NumPy puro), el overhead de coordinación supera el tiempo de evaluación. Los resultados experimentales muestran speedups de ~0.5x (threading) y ~0.07x (multiprocessing) respecto al secuencial para estas funciones.
 
 Para seleccionar el evaluador, edita el campo `evaluator` en el YAML correspondiente:

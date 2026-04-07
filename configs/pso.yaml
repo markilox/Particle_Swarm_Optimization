@@ -12,7 +12,8 @@ dimension: 2
 #   ackley:     [-32.768, 32.768]
 
 evaluator: sequential
-# max_workers: null  # only for threading / multiprocessing
+# max_workers: 4    # workers for threading/multiprocessing (null = Python default)
+                    # rule of thumb: swarm_size / max_workers >= 4-8 tasks/worker
 
 swarm_size: 30
 iterations: 200

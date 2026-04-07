@@ -89,6 +89,8 @@ Paraleliza la evaluación de fitness de todas las partículas usando un pool de 
 **¿Por qué no mejora en Python?**
 El GIL (Global Interpreter Lock) impide que dos hilos ejecuten bytecode Python simultáneamente. Para funciones como Sphere o Rastrigin, que son operaciones NumPy puras, el overhead de sincronización de hilos supera el tiempo de evaluación por partícula. Los resultados experimentales muestran speedups de ~0.5x (2x más lento que secuencial) con el pool reutilizado.
 
+**Número de workers**: con `max_workers=None`, Python crea `min(32, cpu_count + 4)` hilos. Para un enjambre de 30 partículas en una máquina de 20 cores, esto significa 24 hilos con ~1.25 partículas/hilo — el overhead de sincronización domina completamente. Se recomienda fijar `max_workers=4` (~7.5 partículas/worker) en `configs/benchmarks.yaml` para un ratio más razonable.
+
 **Cuándo sería útil**: si la función objetivo implicara I/O (consultas a base de datos, llamadas HTTP) o código C externo que libera el GIL durante un tiempo significativo.
 
 ### V2 — Multiprocessing (ProcessPoolExecutor)
@@ -99,17 +101,19 @@ Paraleliza la evaluación usando procesos del sistema operativo, evitando el GIL
 
 **Coste de IPC residual**: aunque el pool se reutiliza, cada llamada a `executor.map()` sigue requiriendo serializar (pickle) las posiciones y el objetivo, enviarlos a los workers y recoger los resultados. Para funciones de benchmark (microsegundos por evaluación), este coste por iteración sigue siendo mayor que el cómputo. Speedup experimental: ~0.07x.
 
+**Número de workers**: con `max_workers=None`, Python crea `cpu_count` procesos. En una máquina de 20 cores, esto son 20 procesos con 1.5 partículas/proceso — más overhead de IPC del necesario. Con `max_workers=4`, cada proceso recibe ~7.5 partículas y el ratio trabajo/coste mejora significativamente. Regla general: `swarm_size / max_workers ≥ 4–8`.
+
 **Optimización con `chunksize`**: se envían varios argumentos por tarea para reducir el número de mensajes IPC. Mejora para enjambres grandes.
 
 **Cuándo sería útil**: funciones objetivo computacionalmente costosas (simulaciones, modelos físicos, ejecutables externos) donde el tiempo de evaluación supera el overhead de IPC (regla empírica: > 10 ms por evaluación).
 
 ### Resumen experimental
 
-| Evaluador | Speedup vs secuencial | Caso de uso |
-|---|---|---|
-| Sequential | 1.0x (baseline) | Siempre para funciones baratas |
-| Threading | ~0.5x (más lento) | I/O-bound o C ext que libera GIL |
-| Multiprocessing | ~0.07x (más lento) | Funciones costosas (> ~10 ms/eval) |
+| Evaluador | Speedup vs secuencial | `max_workers` | Caso de uso |
+|---|---|---|---|
+| Sequential | 1.0x (baseline) | — | Siempre para funciones baratas |
+| Threading | ~0.5x (más lento) | 4 (swarm/4 ≈ 7.5 tareas) | I/O-bound o C ext que libera GIL |
+| Multiprocessing | ~0.07x (más lento) | 4 (swarm/4 ≈ 7.5 tareas) | Funciones costosas (> ~10 ms/eval) |
 
 **Conclusión**: para las funciones de benchmark estándar, el evaluador secuencial es siempre el más eficiente. Las variantes paralelas son relevantes únicamente cuando el coste de evaluación es alto.
 
