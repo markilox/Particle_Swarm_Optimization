@@ -107,15 +107,37 @@ Paraleliza la evaluación usando procesos del sistema operativo, evitando el GIL
 
 **Cuándo sería útil**: funciones objetivo computacionalmente costosas (simulaciones, modelos físicos, ejecutables externos) donde el tiempo de evaluación supera el overhead de IPC (regla empírica: > 10 ms por evaluación).
 
+### V3 — Asyncio (concurrencia cooperativa)
+
+Paraleliza la evaluación de fitness usando corrutinas con `asyncio`, sin crear hilos ni procesos adicionales.
+
+**Caso de uso diseñado**: asyncio es concurrencia cooperativa, no paralelismo real. No acelera cómputo CPU-bound puro. Su utilidad aparece cuando la evaluación del fitness implica **esperas asíncronas**: consultas a un servicio externo, lectura de archivos, latencias de red, o cualquier función que simule evaluaciones con tiempos variables (ej. simuladores que tardan distinto según la partícula). El `AsyncioEvaluator` implementa esto inyectando `latency_s` y `jitter` configurables.
+
+**Ciclo de vida del event loop**: se crea un `asyncio.new_event_loop()` en `__init__` y se reutiliza en todas las iteraciones mediante `loop.run_until_complete(...)`. Esto evita el overhead de crear un nuevo event loop en cada iteración.
+
+**Cuatro estrategias implementadas**:
+
+| Estrategia | Mecanismo | Cuándo preferirla |
+|---|---|---|
+| `gather` | `asyncio.gather(*coros)` — todas las corrutinas en paralelo | Caso general; recomendada por sencillez |
+| `create_task` | `loop.create_task()` + `await` por tarea | Cuando se necesita control explícito de las tareas |
+| `as_completed` | `asyncio.as_completed(coros)` | Cuando se quiere procesar resultados según llegan (útil con tiempos muy asimétricos) |
+| `queue` | Producer-consumer con `asyncio.Queue` y `n_workers` consumidores | Cuando se quiere limitar la concurrencia máxima |
+
+**Relación con el GIL**: asyncio no evita el GIL. Todas las corrutinas se ejecutan en el mismo hilo Python, alternando su ejecución en los puntos de `await`. Sin embargo, durante el `await asyncio.sleep()` (o una llamada I/O real), el hilo está libre y otras corrutinas pueden avanzar. Para funciones benchmark puras (sin latencia real), el overhead del event loop hace que sea más lento que el secuencial.
+
+**Cuándo sería útil con latencias reales**: si cada partícula consulta un endpoint REST (p. ej. 50 ms de latencia × 30 partículas = 1500 ms secuencial vs ~50 ms con gather), asyncio ofrece un speedup teórico igual al número de partículas. El evaluador puede probarse con `latency_s=0.05, jitter=0.01` para simular este escenario.
+
 ### Resumen experimental
 
-| Evaluador | Speedup vs secuencial | `max_workers` | Caso de uso |
+| Evaluador | Speedup vs secuencial | Condición | Caso de uso |
 |---|---|---|---|
-| Sequential | 1.0x (baseline) | — | Siempre para funciones baratas |
-| Threading | ~0.5x (más lento) | 4 (swarm/4 ≈ 7.5 tareas) | I/O-bound o C ext que libera GIL |
-| Multiprocessing | ~0.07x (más lento) | 4 (swarm/4 ≈ 7.5 tareas) | Funciones costosas (> ~10 ms/eval) |
+| Sequential | 1.0x (baseline) | — | Siempre para funciones baratas (< 1 ms/eval) |
+| Threading | ~0.5x (más lento) | CPU-bound NumPy | I/O-bound o código C que libera el GIL |
+| Multiprocessing | ~0.07x (más lento) | CPU-bound NumPy | Funciones costosas (> ~10 ms/eval) |
+| Asyncio | ~0.3x sin latencia; speedup ≈ N con latencias I/O | Latencia simulada | Evaluaciones con I/O o latencias variables |
 
-**Conclusión**: para las funciones de benchmark estándar, el evaluador secuencial es siempre el más eficiente. Las variantes paralelas son relevantes únicamente cuando el coste de evaluación es alto.
+**Conclusión**: para las funciones de benchmark estándar, el evaluador secuencial es siempre el más eficiente. Las variantes paralelas/concurrentes son relevantes únicamente cuando el coste de evaluación lo justifica: threading y multiprocessing para cómputo intensivo que libera el GIL o supera el overhead de IPC; asyncio para evaluaciones I/O-bound o con latencias variables.
 
 ---
 
@@ -145,8 +167,10 @@ Todos los scripts leen de archivos YAML en `configs/`:
 
 ## 7. Limitaciones conocidas
 
-- **GIL**: threading no ofrece paralelismo real para código CPU-bound en Python puro o NumPy. Es una limitación del intérprete CPython, no del diseño.
+- **GIL**: threading y asyncio no ofrecen paralelismo real para código CPU-bound en Python puro o NumPy. Es una limitación del intérprete CPython, no del diseño.
 - **IPC overhead**: multiprocessing es contraproducente para funciones ligeras. Requiere funciones objetivo serializables (picklables), lo que excluye lambdas y closures complejos.
+- **Asyncio sin I/O real**: el `AsyncioEvaluator` simula latencia con `asyncio.sleep`. En producción, la ganancia real solo aparece si la función objetivo hace I/O (HTTP, BD, ficheros) o llama a código que libera el GIL durante la espera.
 - **Topología única**: solo se implementa global best. Funciones multimodales en alta dimensión (Rastrigin d=30) podrían beneficiarse de topologías locales.
-- **Sin paralelismo en actualización**: la fase de actualización de velocidades/posiciones es siempre secuencial. En enjambres muy grandes podría paralelizarse con NumPy vectorizado.
+- **Sin paralelismo en actualización**: la fase de actualización de velocidades/posiciones es siempre secuencial.
 - **Reproducibilidad con multiprocessing**: el orden de evaluación es determinista (executor.map preserva orden), pero el seed del RNG principal no se propaga a los workers (no lo necesitan, ya que solo evalúan la función).
+- **Reproducibilidad con asyncio**: con `latency_s=0` (sin latencia), el orden de `gather` es determinista y los resultados son idénticos a los del secuencial. Con latencia y jitter activados, el orden de finalización puede variar entre ejecuciones; los resultados de optimización son igualmente correctos porque el swarm update se aplica una vez todas las corrutinas han terminado.

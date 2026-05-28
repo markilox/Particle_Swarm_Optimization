@@ -120,17 +120,27 @@ El núcleo PSO es idéntico en todas las variantes. Solo cambia el **evaluador d
 | **V0 Sequential** | Bucle Python puro | Siempre para funciones baratas (< 1 ms/eval) |
 | **V1 Threading** | `ThreadPoolExecutor` (pool reutilizado) | Funciones I/O-bound o código C que libera el GIL |
 | **V2 Multiprocessing** | `ProcessPoolExecutor` (pool reutilizado) + batching | Funciones costosas (> ~10 ms/eval) |
+| **V3 Asyncio** | `asyncio.gather` / `as_completed` / Queue (event loop reutilizado) | Evaluaciones con I/O o latencias variables por partícula |
 
-**Ciclo de vida del pool**: ambos evaluadores crean el pool de workers una vez en `__init__` y lo reutilizan en cada iteración. `run_experiment()` llama a `close()` en un bloque `finally` al terminar la ejecución.
+**Ciclo de vida del pool / event loop**: threading y multiprocessing crean el pool una vez en `__init__` y lo reutilizan en cada iteración. Asyncio crea el event loop una vez y lo mantiene abierto durante toda la ejecución. `run_experiment()` llama a `close()` en un bloque `finally` al terminar.
 
-**Número de workers**: configurable con `max_workers` en el YAML. Con `max_workers=None` Python usaría `cpu_count` procesos o `min(32, cpu_count+4)` hilos — más workers que partículas para enjambres pequeños, lo que maximiza el overhead. Se recomienda `max_workers=4` con `swarm_size=30`, dando ~7-8 partículas/worker. Regla general: `swarm_size / max_workers ≥ 4–8`.
+**Número de workers**: configurable con `max_workers` en el YAML (threading y multiprocessing). Con `max_workers=None` Python usaría `cpu_count` procesos o `min(32, cpu_count+4)` hilos — más workers que partículas para enjambres pequeños, lo que maximiza el overhead. Se recomienda `max_workers=4` con `swarm_size=30`, dando ~7-8 partículas/worker. Regla general: `swarm_size / max_workers ≥ 4–8`.
 
-**Nota sobre el GIL**: threading no ofrece paralelismo real para código CPU-bound en CPython. Para las funciones de benchmark (NumPy puro), el overhead de coordinación supera el tiempo de evaluación. Los resultados experimentales muestran speedups de ~0.5x (threading) y ~0.07x (multiprocessing) respecto al secuencial para estas funciones.
+**Nota sobre el GIL**: threading y asyncio no ofrecen paralelismo real para código CPU-bound en CPython. Para las funciones de benchmark (NumPy puro), el overhead de coordinación supera el tiempo de evaluación. Los resultados experimentales muestran speedups de ~0.5x (threading), ~0.07x (multiprocessing) y ~0.3x (asyncio sin latencia) respecto al secuencial. Con evaluaciones I/O-bound (ej. `latency_s=0.05`), asyncio con `gather` acerca el tiempo total al de una sola evaluación independientemente del tamaño del enjambre.
 
 Para seleccionar el evaluador, edita el campo `evaluator` en el YAML correspondiente:
 
 ```yaml
-evaluator: sequential   # sequential | threading | multiprocessing
+evaluator: sequential   # sequential | threading | multiprocessing | asyncio
+```
+
+Para asyncio se pueden configurar parámetros adicionales:
+
+```yaml
+asyncio_latency_s: 0.0    # latencia simulada por evaluación (0 = sin simulación)
+asyncio_jitter: 0.0       # variación aleatoria de la latencia
+asyncio_strategy: gather  # gather | create_task | as_completed | queue
+asyncio_n_workers: 4      # consumidores para la estrategia queue
 ```
 
 ---
