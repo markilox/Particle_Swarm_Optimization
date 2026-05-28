@@ -34,10 +34,8 @@ def load_config() -> dict:
 def _evaluator_kwargs(ev_name: str, params: dict, seed: int | None = None) -> dict:
     if ev_name == "asyncio":
         return {
-            "strategy": params.get("asyncio_strategy", "gather"),
             "latency_s": params.get("asyncio_latency_s", 0.0),
             "jitter":    params.get("asyncio_jitter", 0.0),
-            "n_workers": params.get("asyncio_n_workers", 4),
             "seed":      seed,
         }
     return {"max_workers": params.get("max_workers")}

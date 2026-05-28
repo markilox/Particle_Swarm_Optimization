@@ -18,8 +18,6 @@ evaluator: sequential
 # asyncio-specific params (V3 — only used when evaluator: asyncio)
 # asyncio_latency_s: 0.005   # base simulated I/O latency per particle (seconds)
 # asyncio_jitter: 0.002      # ± random variation (asymmetric evaluation)
-# asyncio_strategy: gather   # gather | tasks | as_completed | queue
-# asyncio_n_workers: 4       # queue consumers (only used when strategy: queue)
 
 swarm_size: 30
 iterations: 200

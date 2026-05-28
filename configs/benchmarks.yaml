@@ -41,7 +41,5 @@ max_workers: 4
 # set latency_s > 0 to simulate I/O-bound evaluation (asyncio's real advantage)
 asyncio_latency_s: 0.0
 asyncio_jitter: 0.0
-asyncio_strategy: gather   # gather | tasks | as_completed | queue
-asyncio_n_workers: 4       # queue consumers (only used when strategy: queue)
 
 output_dir: results/benchmarks

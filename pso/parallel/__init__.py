@@ -23,8 +23,7 @@ def get_evaluator(name: str, **kwargs) -> FitnessEvaluator:
     kwargs are forwarded to the chosen evaluator's constructor:
       - threading/multiprocessing: max_workers (int)
       - multiprocessing:           chunksize (int)
-      - asyncio:                   latency_s (float), jitter (float),
-                                   strategy (str), n_workers (int), seed (int)
+      - asyncio:                   latency_s (float), jitter (float), seed (int)
     """
     name = name.strip().lower()
     if name == "sequential":
@@ -40,8 +39,6 @@ def get_evaluator(name: str, **kwargs) -> FitnessEvaluator:
         return AsyncioEvaluator(
             latency_s=kwargs.get("latency_s", 0.0),
             jitter=kwargs.get("jitter", 0.0),
-            strategy=kwargs.get("strategy", "gather"),
-            n_workers=kwargs.get("n_workers", 4),
             seed=kwargs.get("seed"),
         )
     available = ", ".join(EVALUATOR_NAMES)

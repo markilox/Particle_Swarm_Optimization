@@ -4,16 +4,6 @@ Finds the N-color palette that minimises the Mean Squared Quantisation
 Error (MSQE) in RGB space: for each pixel, its squared distance to the
 nearest palette entry is computed, then averaged over all sampled pixels.
 
-Why PSO is interesting here
-────────────────────────────
-• Non-convex: irregular pixel clusters in RGB space create many local
-  minima that gradient methods cannot escape.
-• Permutation symmetry: any permutation of the N palette colours gives the
-  same MSQE, so there are N! equivalent global minima — the fitness
-  landscape is highly degenerate.
-• PSO explores the landscape globally without requiring gradients, and its
-  social component lets particles share discoveries across the swarm.
-
 Search space
 ─────────────
   dimension = N × 3   (N colours, each with R, G, B ∈ [0, 255])
@@ -24,7 +14,7 @@ Usage
   python color_palette.py photo.jpg
   python color_palette.py photo.jpg --n-colors 16 --swarm-size 60 --seed 0
   python color_palette.py photo.jpg --n-colors 8 --evaluator multiprocessing
-  python color_palette.py photo.jpg --n-colors 8 --evaluator asyncio --strategy gather
+  python color_palette.py photo.jpg --n-colors 8 --evaluator asyncio
 """
 
 import argparse
@@ -190,6 +180,8 @@ def parse_args() -> argparse.Namespace:
                        help="Maximum PSO iterations.")
     g_pso.add_argument("--stagnation", type=int, default=60,
                        help="Stop after N iterations without improvement.")
+    g_pso.add_argument("--min-delta", type=float, default=0.1, dest="min_delta",
+                       help="Minimum MSQE improvement to reset the stagnation counter.")
     g_pso.add_argument("--inertia", type=float, default=0.7)
     g_pso.add_argument("--cognitive", type=float, default=1.5)
     g_pso.add_argument("--social", type=float, default=1.5)
@@ -202,13 +194,8 @@ def parse_args() -> argparse.Namespace:
                       choices=["sequential", "threading", "multiprocessing", "asyncio"])
     g_ev.add_argument("--max-workers", type=int, default=None,
                       help="Worker count for threading / multiprocessing.")
-    g_ev.add_argument("--strategy", default="gather",
-                      choices=["gather", "tasks", "as_completed", "queue"],
-                      help="Asyncio concurrency strategy (asyncio evaluator only).")
     g_ev.add_argument("--latency", type=float, default=0.0, dest="asyncio_latency",
                       help="Simulated I/O latency per particle in seconds (asyncio only).")
-    g_ev.add_argument("--n-workers", type=int, default=4, dest="asyncio_n_workers",
-                      help="Queue consumers (asyncio + queue strategy only).")
 
     g_out = p.add_argument_group("output")
     g_out.add_argument("--output-dir", type=Path, default=Path("results/color_palette"))
@@ -247,10 +234,8 @@ def main() -> None:
     if args.evaluator == "asyncio":
         evaluator = get_evaluator(
             "asyncio",
-            strategy=args.strategy,
             latency_s=args.asyncio_latency,
             jitter=0.0,
-            n_workers=args.asyncio_n_workers,
             seed=args.seed,
         )
     else:
@@ -266,6 +251,7 @@ def main() -> None:
         stop=StopCriteria(
             max_iterations=args.iterations,
             stagnation_iterations=args.stagnation,
+            min_delta=args.min_delta,
         ),
         seed=args.seed,
     )
