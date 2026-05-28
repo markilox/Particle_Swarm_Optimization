@@ -32,6 +32,20 @@ def load_config() -> dict:
         return yaml.safe_load(f)
 
 
+def _make_evaluator(params: dict):
+    ev_name = params["evaluator"]
+    if ev_name == "asyncio":
+        return get_evaluator(
+            "asyncio",
+            strategy=params.get("asyncio_strategy", "gather"),
+            latency_s=params.get("asyncio_latency_s", 0.0),
+            jitter=params.get("asyncio_jitter", 0.0),
+            n_workers=params.get("asyncio_n_workers", 4),
+            seed=params.get("seed"),
+        )
+    return get_evaluator(ev_name, max_workers=params.get("max_workers"))
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     logger = logging.getLogger("grid_search")
@@ -57,7 +71,7 @@ def main() -> None:
         objective=objective,
         dimension=params["dimension"],
         grid=grid,
-        evaluator_factory=lambda: get_evaluator(params["evaluator"], max_workers=params.get("max_workers")),
+        evaluator_factory=lambda: _make_evaluator(params),
         evaluator_name=params["evaluator"],
         output_dir=None,
         logger=logger,

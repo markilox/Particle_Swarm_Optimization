@@ -1,6 +1,6 @@
 # Benchmark suite configuration
 # Available objectives: sphere, rastrigin, rosenbrock, ackley
-# Available evaluators: sequential, threading, multiprocessing
+# Available evaluators: sequential, threading, multiprocessing, asyncio
 
 objectives:
   - sphere
@@ -17,6 +17,7 @@ evaluators:
   - sequential
   - threading
   - multiprocessing
+  - asyncio
 
 seeds:
   - 42
@@ -34,5 +35,13 @@ social: 1.5
 # Workers for threading/multiprocessing (null = Python default)
 # With swarm_size=30, max_workers=4 gives ~7-8 particles/worker — better overhead ratio
 max_workers: 4
+
+# asyncio-specific params (V3 — only used when "asyncio" is in evaluators)
+# latency_s=0 + jitter=0 → measures pure coroutine overhead vs sequential (expected: slightly slower)
+# set latency_s > 0 to simulate I/O-bound evaluation (asyncio's real advantage)
+asyncio_latency_s: 0.0
+asyncio_jitter: 0.0
+asyncio_strategy: gather   # gather | tasks | as_completed | queue
+asyncio_n_workers: 4       # queue consumers (only used when strategy: queue)
 
 output_dir: results/benchmarks

@@ -1,6 +1,6 @@
 # Single PSO run configuration
 # Available objectives: sphere, rastrigin, rosenbrock, ackley
-# Available evaluators: sequential, threading, multiprocessing
+# Available evaluators: sequential, threading, multiprocessing, asyncio
 
 objective: sphere
 dimension: 2
@@ -14,6 +14,12 @@ dimension: 2
 evaluator: sequential
 # max_workers: 4    # workers for threading/multiprocessing (null = Python default)
                     # rule of thumb: swarm_size / max_workers >= 4-8 tasks/worker
+
+# asyncio-specific params (V3 — only used when evaluator: asyncio)
+# asyncio_latency_s: 0.005   # base simulated I/O latency per particle (seconds)
+# asyncio_jitter: 0.002      # ± random variation (asymmetric evaluation)
+# asyncio_strategy: gather   # gather | tasks | as_completed | queue
+# asyncio_n_workers: 4       # queue consumers (only used when strategy: queue)
 
 swarm_size: 30
 iterations: 200

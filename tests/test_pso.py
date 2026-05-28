@@ -1,5 +1,3 @@
-
-
 import numpy as np
 
 from pso.core.bounds import ClampBoundsPolicy
@@ -101,7 +99,7 @@ class TestBounds:
         pso = PSO(objective=objective, bounds=bounds, config=config)
 
         snapshots = []
-        result = pso.optimize(on_iteration=lambda it, pos, gbp, gbv: snapshots.append(pos))
+        pso.optimize(on_iteration=lambda it, pos, gbp, gbv: snapshots.append(pos))
 
         for positions in snapshots:
             assert np.all(positions >= lower)

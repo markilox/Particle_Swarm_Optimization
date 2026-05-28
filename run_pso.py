@@ -35,7 +35,18 @@ def main() -> None:
     params = load_config()
 
     objective = get_objective(params["objective"])
-    evaluator = get_evaluator(params["evaluator"], max_workers=params.get("max_workers"))
+    ev_name = params["evaluator"]
+    if ev_name == "asyncio":
+        evaluator = get_evaluator(
+            "asyncio",
+            strategy=params.get("asyncio_strategy", "gather"),
+            latency_s=params.get("asyncio_latency_s", 0.0),
+            jitter=params.get("asyncio_jitter", 0.0),
+            n_workers=params.get("asyncio_n_workers", 4),
+            seed=params.get("seed"),
+        )
+    else:
+        evaluator = get_evaluator(ev_name, max_workers=params.get("max_workers"))
 
     bounds = BoxBounds(
         lower=np.full(params["dimension"], params.get("lower_bound", objective.lower_bound)),

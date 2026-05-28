@@ -31,6 +31,18 @@ def load_config() -> dict:
         return yaml.safe_load(f)
 
 
+def _evaluator_kwargs(ev_name: str, params: dict, seed: int | None = None) -> dict:
+    if ev_name == "asyncio":
+        return {
+            "strategy": params.get("asyncio_strategy", "gather"),
+            "latency_s": params.get("asyncio_latency_s", 0.0),
+            "jitter":    params.get("asyncio_jitter", 0.0),
+            "n_workers": params.get("asyncio_n_workers", 4),
+            "seed":      seed,
+        }
+    return {"max_workers": params.get("max_workers")}
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     logger = logging.getLogger("benchmarks")
@@ -68,7 +80,7 @@ def main() -> None:
 
         for idx, (obj_name, dim, ev_name, seed) in enumerate(combos, 1):
             objective = get_objective(obj_name)
-            evaluator = get_evaluator(ev_name, max_workers=params.get("max_workers"))
+            evaluator = get_evaluator(ev_name, **_evaluator_kwargs(ev_name, params, seed))
 
             config = PSOConfig(
                 dimension=dim,
